@@ -3,13 +3,15 @@ services:
     build: .
     container_name: kv-app
     environment:
-      APP_PORT: "8081"
-      TARANTOOL_HOST: "tarantool-storage"
-      TARANTOOL_PORT: "3031"
-      TARANTOOL_USERNAME: "storage"
-      TARANTOOL_PASSWORD: sesame
+      ENV: local
+      HOST: "localhost"
+      PORT: "8081"
+      STORAGE_HOST: "tarantool-storage"
+      STORAGE_PORT: "3031"
+      STORAGE_USERNAME: "storage"
+      STORAGE_PASSWORD: "sesame"
     ports:
-      - 8081:80
+      - 8081:8081
     depends_on:
       tarantool-storage:
         condition: service_healthy
