@@ -1,0 +1,45 @@
+services:
+  tarantool-app:
+    build: .
+    container_name: kv-app
+    environment:
+      APP_PORT: "8081"
+      TARANTOOL_HOST: "tarantool-storage"
+      TARANTOOL_PORT: "3031"
+      TARANTOOL_USERNAME: "storage"
+      TARANTOOL_PASSWORD: sesame
+    ports:
+      - 8081:80
+    depends_on:
+      tarantool-storage:
+        condition: service_healthy
+    networks:
+      - app_network
+
+  tarantool-storage:
+    image: tarantool/tarantool:3@sha256:294387c35a6120c6d881a3e1ccc174938c94afbe744834e6d500f28063c883f2
+    container_name: kv-storage
+    environment:
+      TT_APP_NAME: app_storage
+      TT_INSTANCE_NAME: instance-001
+    volumes:
+      - tarantool_data:/var/lib/tarantool
+      - ./tarantool.lua:/opt/tarantool/tarantool.lua
+    command: tarantool /opt/tarantool/tarantool.lua
+    healthcheck:
+      test: ["CMD-SHELL", "status"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    restart: always
+    networks:
+      - app_network
+
+volumes:
+  tarantool_data:
+    name: tarantool_data_vol
+
+networks:
+  app_network:
+    driver: bridge
