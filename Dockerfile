@@ -6,7 +6,6 @@ WORKDIR /src
 COPY . .
 RUN go build -trimpath -ldflags "-s -w" -o /go/bin/tarantool-app
 
-
 FROM scratch AS binary
 LABEL author="a.burashnikov"
 COPY --from=build /go/bin/tarantool-app /tarantool-app
