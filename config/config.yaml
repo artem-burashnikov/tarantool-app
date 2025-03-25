@@ -1,5 +1,5 @@
 ---
-# Deployment environment: local, dev, prod.
+# Deployment environment: local, prod.
 env: "local"
 
 # Storage uri and connection credentials.
