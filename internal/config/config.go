@@ -1,4 +1,4 @@
-// Structures below mirror a config.yaml defined in tarantool-app/config.
+// Structures below mirror an app_config.yaml defined in tarantool-app/config.
 
 package config
 

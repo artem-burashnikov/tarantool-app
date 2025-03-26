@@ -14,4 +14,4 @@ groups:
           instance001: {}
 
 app:
-  file: 'init.lua'
+  file: 'tarantool_storage_init.lua'

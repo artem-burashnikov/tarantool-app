@@ -3,6 +3,7 @@ services:
     build: .
     container_name: kv-app
     environment:
+      CONFIG_PATH: "tarantool_app.yaml"
       APP_ENV: "${APP_ENV:-local}"
       APP_HOST: "${APP_HOST:-localhost}"
       APP_PORT: "${APP_PORT:-8081}"
@@ -10,8 +11,10 @@ services:
       STORAGE_PORT: "${STORAGE_PORT:-3301}"
       STORAGE_USERNAME: "storage"
       STORAGE_PASSWORD: "sesame"
+    volumes:
+      - "./configs/tarantool_app.yaml:/tarantool_app.yaml"
     ports:
-      - 8081:8081
+      - "${APP_PORT:-8081}:${APP_PORT:-8081}"
     depends_on:
       tarantool-storage:
         condition: service_healthy
@@ -19,16 +22,16 @@ services:
       - tarantool
 
   tarantool-storage:
-    image: tarantool/tarantool:3@sha256:294387c35a6120c6d881a3e1ccc174938c94afbe744834e6d500f28063c883f2
+    image: tarantool/tarantool:3.3.1@sha256:294387c35a6120c6d881a3e1ccc174938c94afbe744834e6d500f28063c883f2
     container_name: kv-storage
     environment:
       TT_INSTANCE_NAME: "instance001"
-      TT_CONFIG: "/opt/tarantool/tarantool_config.yaml"
+      TT_CONFIG: "/opt/tarantool/tarantool_storage.yaml"
       TT_IPROTO_LISTEN: '[ {"uri":"${STORAGE_PORT:-3301}"} ]'
     volumes:
       - tarantool_data:/var/lib/tarantool
-      - ./config/init.lua:/opt/tarantool/init.lua
-      - ./config/tarantool_config.yaml:/opt/tarantool/tarantool_config.yaml
+      - ./configs/tarantool_storage_init.lua:/opt/tarantool/tarantool_storage_init.lua
+      - ./configs/tarantool_storage.yaml:/opt/tarantool/tarantool_storage.yaml
     healthcheck:
       test: ["CMD-SHELL", "status"]
       interval: 5s
