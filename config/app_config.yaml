@@ -1,11 +1,11 @@
 ---
 # Deployment environment: local, prod.
-env: "local"
+app_env: "local"
 
 # Storage uri and connection credentials.
 storage:
-  storage_host: "tarantool-storage"
-  storage_port: "3031"
+  storage_host: "instance001"
+  storage_port: "3301"
   credentials:
     user: "storage"
     password: "sesame"

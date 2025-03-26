@@ -1,0 +1,17 @@
+credentials:
+  users:
+    storage:
+      password: sesame
+      privileges:
+      - permissions: [ read, write ]
+        spaces: [ kv_storage ]
+
+groups:
+  group001:
+    replicasets:
+      replicaset001:
+        instances:
+          instance001: {}
+
+app:
+  file: 'init.lua'
