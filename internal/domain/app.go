@@ -1,7 +1,3 @@
 package domain
 
-import (
-	"encoding/json"
-)
-
-type Value = map[string]json.RawMessage
+type Value = map[string]any
