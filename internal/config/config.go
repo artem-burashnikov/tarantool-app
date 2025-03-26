@@ -22,8 +22,8 @@ type Storage struct {
 }
 
 type HTTPServer struct {
-	Host       string        `yaml:"app_host" env:"APP_HOST" env-default:"localhost"`
-	Port       string        `yaml:"app_port" env:"APP_PORT" env-default:"8080"`
-	Timeout    time.Duration `yaml:"timeout" env-default:"5s"`
-	IdleTimout time.Duration `yaml:"idle_timeout" env-default:"60s"`
+	Host        string        `yaml:"app_host" env:"APP_HOST" env-default:"localhost"`
+	Port        string        `yaml:"app_port" env:"APP_PORT" env-default:"8080"`
+	Timeout     time.Duration `yaml:"timeout" env-default:"5s"`
+	IdleTimeout time.Duration `yaml:"idle_timeout" env-default:"60s"`
 }
