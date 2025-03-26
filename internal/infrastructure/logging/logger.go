@@ -53,5 +53,18 @@ func (l *Slogger) Warn(msg string, args ...any) {
 }
 
 func (l *Slogger) Error(msg string, args ...any) {
-	l.logger.Warn(msg, args...)
+	l.logger.Error(msg, args...)
+}
+
+// error attribute for error log level.
+func (l *Slogger) Err(err error) slog.Attr {
+	return slog.Attr{
+		Key:   "error",
+		Value: slog.StringValue(err.Error()),
+	}
+}
+
+// key=value attribute for any log level.
+func (l *Slogger) Str(key, msg string) slog.Attr {
+	return slog.String(key, msg)
 }
