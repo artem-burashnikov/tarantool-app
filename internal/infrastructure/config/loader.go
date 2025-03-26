@@ -1,5 +1,4 @@
 // Configuration loader interface and implementation.
-// Interface may be used for testing.
 
 package config
 
@@ -10,10 +9,6 @@ import (
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
-
-type Loader interface {
-	Load() (*config.Config, error)
-}
 
 type YAMLconfigLoader struct {
 	configPath string
