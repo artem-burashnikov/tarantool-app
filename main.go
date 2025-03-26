@@ -1,40 +1,26 @@
 package main
 
 import (
-	"context"
-	"fmt"
-	"time"
-
-	"github.com/tarantool/go-tarantool/v2"
-	_ "github.com/tarantool/go-tarantool/v2/datetime"
-	_ "github.com/tarantool/go-tarantool/v2/decimal"
-	_ "github.com/tarantool/go-tarantool/v2/uuid"
+	"tarantool-app/internal/infrastructure/config"
+	"tarantool-app/internal/infrastructure/http"
+	"tarantool-app/internal/infrastructure/logging"
+	"tarantool-app/internal/repository"
+	"tarantool-app/internal/usecase"
 )
 
 func main() {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	cfg := config.MustLoad()
 
-	defer cancel()
+	log := logging.NewLogger(cfg.AppEnv)
+	defer log.SugaredLogger.Sync()
 
-	dialer := tarantool.NetDialer{
-		Address:  "tarantool-storage:3301",
-		User:     "storage",
-		Password: "sesame",
-	}
-	opts := tarantool.Opts{
-		Timeout: time.Second,
-	}
+	tt := repository.NewTarantoolRepository()
 
-	conn, err := tarantool.Connect(ctx, dialer, opts)
-	if err != nil {
-		fmt.Println("Connection refused:", err)
-		return
-	}
+	crudUsecase := usecase.NewCRUD(tt)
 
-	fmt.Println("Connection established")
+	apiHandler := http.NewRequestHandler(crudUsecase, log)
 
-	time.Sleep(5 * time.Second)
+	r := http.NewGinRouter(cfg.AppEnv, log, apiHandler)
 
-	conn.CloseGraceful()
-	fmt.Println("Connection is closed")
+	r.Run(":" + cfg.HTTPServer.Port)
 }
