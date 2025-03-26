@@ -1,29 +1,40 @@
-// Router interface and implementation.
-// The interface may be used for testing.
+// Router setup and routes definitions.
 
 package http
 
 import (
+	"tarantool-app/internal/constants"
+	"tarantool-app/internal/infrastructure/logging"
+
 	"github.com/gin-gonic/gin"
 )
 
-type Router interface {
-	Run(addr string) error
-}
-
 type GinRouter struct {
-	engine *gin.Engine
+	Engine *gin.Engine
 }
 
-func NewGinRouter(rqHandlers *RequestHandler) *GinRouter {
-	r := gin.Default()
+func NewGinRouter(env string, logger *logging.Logger, rqHandlers *RequestHandler) *GinRouter {
+	if env == constants.EnvProd {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
+	// Create a new engine and attach Recovery and Logger middleware.
+	r := gin.New()
+
+	r.Use(gin.Recovery())
+	r.Use(GinLoggerMiddleware(logger))
+
+	// This is just for silicing a warning.
+	// Matters only when a proxy server is involved.
+	r.SetTrustedProxies(nil)
+
 	setupRoutes(r, rqHandlers)
-	return &GinRouter{engine: r}
+
+	return &GinRouter{Engine: r}
 }
 
-// Satisfies Router interface.
 func (g *GinRouter) Run(addr string) error {
-	return g.engine.Run(addr)
+	return g.Engine.Run(addr)
 }
 
 // Binds handlers to route handles.

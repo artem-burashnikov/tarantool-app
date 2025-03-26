@@ -1,70 +1,91 @@
 package logging
 
 import (
-	"log/slog"
-	"os"
 	"tarantool-app/internal/constants"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
-// Basic logging interface.
-type Logger interface {
-	Info(string, ...any)
-	Debug(string, ...any)
-	Warn(string, ...any)
-	Error(string, ...any)
+type Logger struct {
+	SugaredLogger *zap.SugaredLogger
 }
 
-// stdlib structured logger.
-type Slogger struct {
-	logger *slog.Logger
+// Creates a logger based on application environment.
+// Function createLogger does all configuration work.
+func NewLogger(env string) *Logger {
+	logger := createLogger(env)
+	return &Logger{SugaredLogger: logger.Sugar()}
 }
 
-// Creates a logger based on the application environment.
-// Chooses a text handler and sets a logging level.
-func NewSlogger(env string) *Slogger {
-	var log *slog.Logger
+// Configures logger based on application environment.
+func createLogger(env string) *zap.Logger {
+	// Production configuration.
+	prodEncoderCfg := zap.NewProductionEncoderConfig()
+	prodEncoderCfg.TimeKey = "timestamp"
+	prodEncoderCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+	prodConfig := zap.Config{
+		Level:             zap.NewAtomicLevelAt(zap.InfoLevel),
+		Development:       false,
+		DisableCaller:     true,
+		DisableStacktrace: true,
+		Sampling:          nil,
+		Encoding:          "json",
+		EncoderConfig:     prodEncoderCfg,
+		OutputPaths: []string{
+			"stderr",
+		},
+		ErrorOutputPaths: []string{
+			"stderr",
+		},
+	}
+
+	// Local development configuration.
+	develEncodefCfg := zap.NewDevelopmentEncoderConfig()
+	develEncodefCfg.TimeKey = "timestamp"
+	develEncodefCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+	develConfig := zap.Config{
+		Level:             zap.NewAtomicLevelAt(zap.DebugLevel),
+		Development:       true,
+		DisableCaller:     true,
+		DisableStacktrace: true,
+		Sampling:          nil,
+		Encoding:          "console",
+		EncoderConfig:     develEncodefCfg,
+		OutputPaths: []string{
+			"stderr",
+		},
+		ErrorOutputPaths: []string{
+			"stderr",
+		},
+	}
+
+	var zlogger *zap.Logger
 
 	switch env {
 	case constants.EnvLocal:
-		log = slog.New(
-			slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
-		)
+		zlogger = zap.Must(develConfig.Build())
 	case constants.EnvProd:
-		log = slog.New(
-			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
-		)
+		zlogger = zap.Must(prodConfig.Build())
 	}
 
-	return &Slogger{logger: log}
+	return zlogger
 }
 
-// Interface implementation
+// Logging methods wrappers.
 
-func (l *Slogger) Info(msg string, args ...any) {
-	l.logger.Info(msg, args...)
+func (l *Logger) Info(msg string, keysAndValues ...interface{}) {
+	l.SugaredLogger.Infow(msg, keysAndValues...)
 }
 
-func (l *Slogger) Debug(msg string, args ...any) {
-	l.logger.Debug(msg, args...)
+func (l *Logger) Debug(msg string, keysAndValues ...interface{}) {
+	l.SugaredLogger.Debugw(msg, keysAndValues...)
 }
 
-func (l *Slogger) Warn(msg string, args ...any) {
-	l.logger.Warn(msg, args...)
+func (l *Logger) Warn(msg string, keysAndValues ...interface{}) {
+	l.SugaredLogger.Warnw(msg, keysAndValues...)
 }
 
-func (l *Slogger) Error(msg string, args ...any) {
-	l.logger.Error(msg, args...)
-}
-
-// error attribute for error log level.
-func (l *Slogger) Err(err error) slog.Attr {
-	return slog.Attr{
-		Key:   "error",
-		Value: slog.StringValue(err.Error()),
-	}
-}
-
-// key=value attribute for any log level.
-func (l *Slogger) Str(key, msg string) slog.Attr {
-	return slog.String(key, msg)
+func (l *Logger) Error(msg string, keysAndValues ...interface{}) {
+	l.SugaredLogger.Errorw(msg, keysAndValues...)
 }
