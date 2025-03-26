@@ -51,7 +51,9 @@ func (rh *RequestHandler) GETHandlerFunc(c *gin.Context) {
 	}
 
 	// Key was found --- return in JSON.
-	c.JSON(http.StatusOK, value)
+	c.JSON(http.StatusOK, domain.AppGetResponse{
+		Value: value},
+	)
 }
 
 // POST /kv body: {key: "key", "value": {ARBITRARY JSON}}
