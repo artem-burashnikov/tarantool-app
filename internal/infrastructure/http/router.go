@@ -13,7 +13,7 @@ type GinRouter struct {
 	Engine *gin.Engine
 }
 
-func NewGinRouter(env string, logger *logging.Logger, rqHandlers *RequestHandler) *GinRouter {
+func NewGinRouter(env string, zlog *logging.Logger, rqHandlers *RequestHandler) *GinRouter {
 	if env == constants.EnvProd {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -22,11 +22,15 @@ func NewGinRouter(env string, logger *logging.Logger, rqHandlers *RequestHandler
 	r := gin.New()
 
 	r.Use(gin.Recovery())
-	r.Use(GinLoggerMiddleware(logger))
+	r.Use(GinLoggerMiddleware(zlog))
 
-	// This is just for silicing a warning.
+	// This is just for silencing a warning.
 	// Matters only when a proxy server is involved.
-	r.SetTrustedProxies(nil)
+	if err := r.SetTrustedProxies(nil); err != nil {
+		zlog.Debug("Error setting SetTrustedProxies to nil",
+			"error", err,
+		)
+	}
 
 	setupRoutes(r, rqHandlers)
 
