@@ -59,6 +59,7 @@ func (rh *RequestHandler) GETHandlerFunc(c *gin.Context) {
 	c.JSON(http.StatusOK, domain.AppGetResponse{
 		Value: value},
 	)
+	return
 }
 
 // POST /kv body: {key: "key", "value": {ARBITRARY JSON}}.
@@ -97,6 +98,7 @@ func (rh *RequestHandler) POSTHandlerFunc(c *gin.Context) {
 		Key:     req.Key,
 		Size:    uint(len(req.Value)), // number of bytes in value field
 	})
+	return
 }
 
 // PUT kv/{id} body: {"value": {ARBITRARY JSON}}
@@ -152,6 +154,7 @@ func (rh *RequestHandler) PUTHandlerFunc(c *gin.Context) {
 		Key:     key,
 		Size:    uint(len(value)), // number of bytes in value field
 	})
+	return
 }
 
 // DELETE kv/{key}
@@ -187,4 +190,5 @@ func (rh *RequestHandler) DeleteHandlerFunc(c *gin.Context) {
 		Message: "deleted",
 		Key:     key,
 	})
+	return
 }
