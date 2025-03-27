@@ -1,3 +1,6 @@
+app:
+  file: "tarantool_storage_init.lua"
+
 credentials:
   users:
     storage:
@@ -13,5 +16,3 @@ groups:
         instances:
           instance001: {}
 
-app:
-  file: 'tarantool_storage_init.lua'
