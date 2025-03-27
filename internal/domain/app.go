@@ -3,52 +3,45 @@
 package domain
 
 import (
-	"encoding/json"
+	"fmt"
+
+	"github.com/vmihailenco/msgpack/v5"
 )
 
-// POST Request from user.
-type AppPostRequest struct {
-	Key   string          `json:"key"`
-	Value json.RawMessage `json:"value"`
+type AppPack struct {
+	Key   string         `json:"key"`
+	Value map[string]any `json:"value"`
 }
 
-// POST Response for user.
-type AppPostResponse struct {
-	Message string `json:"message"`
-	Key     string `json:"key"`
-	Size    uint   `json:"size"`
+// Packs TTPack structure in msgPack array.
+func (ttpr *AppPack) EncodeMsgpack(e *msgpack.Encoder) error {
+	if err := e.EncodeArrayLen(2); err != nil {
+		return err
+	}
+	if err := e.EncodeString(ttpr.Key); err != nil {
+		return err
+	}
+	if err := e.EncodeMulti(ttpr.Value); err != nil {
+		return err
+	}
+	return nil
 }
 
-// GET Request from user.
-type AppGetRequest struct {
-	Key string `json:"key"`
-}
-
-// GET Response for user.
-type AppGetResponse struct {
-	Value json.RawMessage `json:"value"`
-}
-
-// PUT Request from user.
-type AppPutRequest struct {
-	Key   string          `json:"key"`
-	Value json.RawMessage `json:"value"`
-}
-
-// PUT Response for user.
-type AppPutResponse struct {
-	Message string `json:"message"`
-	Key     string `json:"key"`
-	Size    uint   `json:"size"`
-}
-
-// DELETE Response
-type AppDeleteRequest struct {
-	Key string `json:"key"`
-}
-
-// DELETE Response
-type AppDeleteResponse struct {
-	Message string `json:"message"`
-	Key     string `json:"key"`
+// Unpacks msgPack array into TTPack structure.
+func (ttpr *AppPack) DecodeMsgpack(d *msgpack.Decoder) error {
+	var err error
+	var l int
+	if l, err = d.DecodeArrayLen(); err != nil {
+		return err
+	}
+	if l != 2 {
+		return fmt.Errorf("array len doesn't match: %d", l)
+	}
+	if ttpr.Key, err = d.DecodeString(); err != nil {
+		return err
+	}
+	if ttpr.Value, err = d.DecodeMap(); err != nil {
+		return err
+	}
+	return nil
 }

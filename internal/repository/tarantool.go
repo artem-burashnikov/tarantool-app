@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"encoding/json"
 	"tarantool-app/internal/config"
 	"tarantool-app/internal/domain"
 	"tarantool-app/internal/infrastructure/logging"
@@ -73,121 +72,148 @@ func (tt *Tarantool) Close() {
 
 // CRUD operations
 
-func (tt *Tarantool) Insert(key string, value json.RawMessage) (domain.TTPack, error) {
+func (tt *Tarantool) Insert(rq *domain.AppPack) error {
 	tt.log.Debug("Insert request",
-		"key", key,
-		"value", value,
+		"key", rq.Key,
+		"value", rq.Value,
 	)
 
-	ttrq := domain.TTPack{
-		Key:   key,
-		Value: value,
-	}
-
-	request := tarantool.NewInsertRequest("kv_storage").Tuple(&ttrq)
+	// We can only check the header to determine the outcome of Insert operation.
+	request := tarantool.NewInsertRequest("kv_storage").Tuple(&rq)
 
 	futureResp, err := tt.conn.Do(request).GetResponse()
 	if err != nil {
 		tt.log.Debug("Failed to Insert data",
-			"key", ttrq.Key,
-			"value", ttrq.Value,
+			"key", rq.Key,
+			"value", rq.Value,
 			"error", err,
 		)
-		return domain.TTPack{}, ErrInsertOperationFail
+		return ErrInsertOperationFail
 	}
 
+	// If key already exists the response header will contain erorr string.
+	// Is there a better way?
 	if futureResp.Header().Error != tarantool.ErrorNo && futureResp.Header().Error.String() == "ER_TUPLE_FOUND" {
 		tt.log.Debug("response error code", "error", futureResp.Header().Error)
-		return domain.TTPack{}, ErrAlreadyExists
+		return ErrAlreadyExists
 	}
 
-	tt.log.Debug("Insert result",
-		"key", key,
-		"value", value,
-	)
-
-	return ttrq, nil
+	return nil
 }
 
-func (tt *Tarantool) Select(key string) (domain.TTPack, error) {
-	tt.log.Debug("Select request",
-		"key", key,
+func (tt *Tarantool) Select(rq *domain.AppPack) (*domain.AppPack, error) {
+	tt.log.Debug("Select request was made",
+		"key", rq.Key,
+		"value", rq.Value,
 	)
-	request := tarantool.NewSelectRequest("kv_storage").Key(tarantool.StringKey{S: key})
 
-	var resp []domain.TTPack
-	err := tt.conn.Do(request).GetTyped(&resp)
+	request := tarantool.NewSelectRequest("kv_storage").Key(tarantool.StringKey{S: rq.Key})
+
+	future := tt.conn.Do(request)
+
+	// Check the response without decoding.
+	// If there is an error, assume Tarantool failed to do the operation.
+	futureResp, err := future.GetResponse()
 	if err != nil {
 		tt.log.Debug("Failed to Select data",
-			"key", key,
+			"key", rq.Key,
+			"value", rq.Value,
 			"error", err,
 		)
-		return domain.TTPack{}, ErrSelectOperationFail
+		return &domain.AppPack{}, err
 	}
 
-	if len(resp) == 0 {
-		return domain.TTPack{}, ErrNotFound
+	// If there were no errors, decode and return the result.
+	var result []domain.AppPack
+	errDecode := futureResp.DecodeTyped(&result)
+	if errDecode != nil {
+		tt.log.Debug("Failed to decode typed data after Select response returned no errors",
+			"key", rq.Key,
+			"value", rq.Value,
+			"error", errDecode,
+		)
+		return &domain.AppPack{}, ErrSelectOperationFail
+	}
+
+	// If the result is zero length array, then the key does not exist.
+	if len(result) == 0 {
+		tt.log.Debug("Select returned zero length array",
+			"key", rq.Key,
+			"value", rq.Value,
+		)
+		return &domain.AppPack{}, ErrNotFound
 	}
 
 	tt.log.Debug("Select response",
-		"key", key,
+		"key", result[0].Key,
+		"value", result[0].Value,
 	)
 
-	return resp[0], nil
+	return &result[0], nil
 }
 
-func (tt *Tarantool) Update(key string, value json.RawMessage) (domain.TTPack, error) {
+func (tt *Tarantool) Update(rq *domain.AppPack) error {
 	tt.log.Debug("Update request",
-		"key", key,
-		"value", value,
+		"key", rq.Key,
+		"value", rq.Value,
 	)
 
 	request := tarantool.NewUpdateRequest("kv_storage").
-		Key(tarantool.StringKey{S: key}).
-		Operations(tarantool.NewOperations().Assign(2, value))
+		Key(tarantool.StringKey{S: rq.Key}).
+		Operations(tarantool.NewOperations().Assign(2, rq.Value))
 
-	var result []json.RawMessage
-	err := tt.conn.Do(request).GetTyped(&result)
+	future := tt.conn.Do(request)
+
+	var result []map[string]any
+	err := future.GetTyped(&result)
 	if err != nil {
 		tt.log.Debug("Update request failed",
-			"key", key,
-			"value", value,
-			"error", err,
+			"key", rq.Key,
+			"value", rq.Value,
+			err,
 		)
-		return domain.TTPack{}, ErrUpdateOperationFail
+		return ErrUpdateOperationFail
 	}
 
+	// Key was not found.
 	if len(result) == 0 {
 		tt.log.Debug("Update returned zero length array",
-			"key", key,
-			"value", value,
+			"key", rq.Key,
+			"value", rq.Value,
 		)
-		return domain.TTPack{}, ErrNotFound
+		return ErrNotFound
 	}
 
-	return domain.TTPack{Key: key, Value: result[0]}, nil
+	return nil
 }
 
-func (tt *Tarantool) Delete(key string) (domain.TTPack, error) {
+func (tt *Tarantool) Delete(rq *domain.AppPack) (*domain.AppPack, error) {
 	tt.log.Debug("Delete request",
-		"key", key,
+		"key", rq.Key,
+		"value", rq.Value,
 	)
 
-	request := tarantool.NewDeleteRequest("kv_storage").Key(tarantool.StringKey{S: key})
+	request := tarantool.NewDeleteRequest("kv_storage").Key(tarantool.StringKey{S: rq.Key})
 
-	var result []domain.TTPack
-	err := tt.conn.Do(request).GetTyped(&result)
+	future := tt.conn.Do(request)
+
+	var result []domain.AppPack
+	err := future.GetTyped(&result)
 	if err != nil {
 		tt.log.Debug("Delete request failed",
-			"key", key,
-			"error", err,
+			"key", rq.Key,
+			err,
 		)
-		return domain.TTPack{}, ErrDeleteOperationFail
+		return &domain.AppPack{}, ErrDeleteOperationFail
 	}
 
 	if len(result) == 0 {
-		return domain.TTPack{}, ErrNotFound
+		tt.log.Debug("Delete request returned zero length array.",
+			"key", rq.Key,
+			"value", rq.Value,
+		)
+		return &domain.AppPack{}, ErrNotFound
 	}
 
-	return result[0], nil
+	return &result[0], nil
 }

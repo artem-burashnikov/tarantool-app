@@ -18,8 +18,8 @@ func NewRepositoryError(message string) *RepositoryError {
 }
 
 var (
-	ErrNotFound            = NewRepositoryError("key not found")
-	ErrAlreadyExists       = NewRepositoryError("key already exists")
+	ErrNotFound            = NewRepositoryError("404 key not found")
+	ErrAlreadyExists       = NewRepositoryError("409 key already exists")
 	ErrInsertOperationFail = NewRepositoryError("insert operation failed")
 	ErrSelectOperationFail = NewRepositoryError("select operation failed")
 	ErrUpdateOperationFail = NewRepositoryError("update operation failed")

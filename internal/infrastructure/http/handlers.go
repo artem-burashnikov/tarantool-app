@@ -3,7 +3,6 @@
 package http
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"tarantool-app/internal/domain"
@@ -26,10 +25,9 @@ func NewRequestHandler(crudHandler *usecase.CRUD, zlog *logging.Logger) *Request
 }
 
 // GET kv/{id}
-// On success responds with corresponding value stored in database.
+// On success responds with value stored in database.
 func (rh *RequestHandler) GETHandlerFunc(c *gin.Context) {
-	// Check if id is ok. If it is --- fetch the data. Then return it to user.
-	rq := domain.AppGetRequest{Key: c.Param("id")}
+	rq := domain.AppPack{Key: c.Param("id")}
 
 	// Empty key is forbidden.
 	// Everything else is ok?
@@ -41,7 +39,6 @@ func (rh *RequestHandler) GETHandlerFunc(c *gin.Context) {
 	// Any other key is ok. Go fetch the data from repository.
 	resp, err := rh.APIHandler.Read(c, &rq)
 	// Either Tarantool somehow failed or key was not found.
-	// TODO: " " key returns 500 internal server errror
 	if err != nil {
 		// If key was not found, respond with status code 404.
 		if errors.Is(err, repository.ErrNotFound) {
@@ -51,31 +48,31 @@ func (rh *RequestHandler) GETHandlerFunc(c *gin.Context) {
 			rh.Logger.Warn("Tarantool failed to retreive data by key",
 				"key", rq.Key,
 			)
-			c.String(http.StatusInternalServerError, "Internal server error.")
+			c.String(http.StatusInternalServerError, "500 Internal server error.")
 		}
 		return
 	}
 
-	// Key was found --- respond in JSON.
-	c.JSON(http.StatusOK, resp)
+	// Key was found and request now contains repository response --- respond to user.
+	c.JSON(http.StatusOK, resp.Value)
 	return
 }
 
 // POST /kv body: {key: "key", "value": {ARBITRARY JSON}}.
-// On success responds with some metainfo about the inserted enty.
+// On success responds with the inserted enty.
 func (rh *RequestHandler) POSTHandlerFunc(c *gin.Context) {
+	var rq domain.AppPack
+
 	// Verify that body is a valid JSON.
 	// If so, process it further and let Tarantool create an entry.
 	// Incorrect request body returns status code 400.
-	var req domain.AppPostRequest
-
-	if err := c.ShouldBindJSON(&req); err != nil || req.Key == "" || len(req.Value) == 0 {
-		c.String(http.StatusBadRequest, "error: invalid request format")
+	if err := c.ShouldBindJSON(&rq); err != nil || rq.Key == "" || len(rq.Value) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request format"})
 		return
 	}
 
 	// Either Tarantool somehow failed or key already exists.
-	resp, err := rh.APIHandler.Create(c, &req)
+	err := rh.APIHandler.Create(c, &rq)
 	if err != nil {
 		// If key already exists, respond with status code 409.
 		if errors.Is(err, repository.ErrAlreadyExists) {
@@ -83,23 +80,28 @@ func (rh *RequestHandler) POSTHandlerFunc(c *gin.Context) {
 		} else {
 			// If further processing failed, log the error and respond with status code 500.
 			rh.Logger.Warn("Tarantool failed to store data",
-				"key", req.Key,
-				"body", req.Value,
+				"key", rq.Key,
+				"value", rq.Value,
+				err,
 			)
-			c.String(http.StatusInternalServerError, "Internal server error.")
+			c.String(http.StatusInternalServerError, "500 Internal server error.")
 		}
 		return
 	}
 
 	// Everything good --- respond.
-	c.JSON(http.StatusCreated, resp)
+	c.JSON(http.StatusCreated, gin.H{
+		"message": "created",
+		"key":     rq.Key,
+		"value":   rq.Value,
+	})
 	return
 }
 
 // PUT kv/{id} body: {"value": {ARBITRARY JSON}}
-// On success responds with some metainfo about the updated enty.
+// On success responds with the updated enty.
 func (rh *RequestHandler) PUTHandlerFunc(c *gin.Context) {
-	rq := domain.AppPutRequest{Key: c.Param("id")}
+	rq := domain.AppPack{Key: c.Param("id")}
 
 	// Empty key is forbidden.
 	// Everything else is ok?
@@ -109,25 +111,13 @@ func (rh *RequestHandler) PUTHandlerFunc(c *gin.Context) {
 	}
 
 	// Verify that body is a valid JSON.
-	// Using raw type here because we need to make sure there are no unneccessary keys in the body.
-	var rawReq map[string]json.RawMessage
-	if err := c.ShouldBindJSON(&rawReq); err != nil {
+	if err := c.ShouldBindJSON(&rq.Value); err != nil || len(rq.Value) != 1 || rq.Value["value"] == nil {
 		c.String(http.StatusBadRequest, "error: invalid request format")
 		return
 	}
-
-	// Check if there is only single `value` field in a given JSON.
-	if len(rawReq) != 1 || rawReq["value"] == nil {
-		c.String(http.StatusBadRequest, "error: invalid request format")
-		return
-	}
-
-	// At this point `value` field is certain to contain JSON data.
-	// Process it further.
-	rq.Value = rawReq["value"]
 
 	// Either Tarantool somehow failed or key was not found.
-	resp, err := rh.APIHandler.Update(c, &rq)
+	err := rh.APIHandler.Update(c, &rq)
 	if err != nil {
 		// If key was not found, respond with status code 404.
 		if errors.Is(err, repository.ErrNotFound) {
@@ -137,21 +127,26 @@ func (rh *RequestHandler) PUTHandlerFunc(c *gin.Context) {
 			rh.Logger.Warn("Tarantool failed to update data",
 				"key", rq.Key,
 				"body", rq.Value,
+				err,
 			)
-			c.String(http.StatusInternalServerError, "Internal server error.")
+			c.String(http.StatusInternalServerError, "500 Internal server error.")
 		}
 		return
 	}
 
 	// Everything good --- respond.
-	c.JSON(http.StatusOK, resp)
+	c.JSON(http.StatusOK, gin.H{
+		"message": "updated",
+		"key":     rq.Key,
+		"value":   rq.Value,
+	})
 	return
 }
 
 // DELETE kv/{key}
 // On success responds with some metainfo about the deleted enty.
 func (rh *RequestHandler) DeleteHandlerFunc(c *gin.Context) {
-	rq := domain.AppDeleteRequest{Key: c.Param("id")}
+	rq := domain.AppPack{Key: c.Param("id")}
 
 	// Empty key is forbidden.
 	// Everything else is ok?
@@ -170,13 +165,18 @@ func (rh *RequestHandler) DeleteHandlerFunc(c *gin.Context) {
 			// If further processing failed, log the error and respond with status code 500.
 			rh.Logger.Warn("Tarantool failed to delete data",
 				"key", rq.Key,
+				err,
 			)
-			c.String(http.StatusInternalServerError, "Internal server error.")
+			c.String(http.StatusInternalServerError, "500 Internal server error.")
 		}
 		return
 	}
 
 	// Everything good --- respond.
-	c.JSON(http.StatusOK, resp)
+	c.JSON(http.StatusOK, gin.H{
+		"message": "deleted",
+		"key":     resp.Key,
+		"value":   resp.Value,
+	})
 	return
 }
