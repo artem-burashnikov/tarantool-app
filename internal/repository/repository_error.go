@@ -5,20 +5,23 @@ package repository
 import "fmt"
 
 type RepositoryError struct {
-	Code    int    // http code
 	Message string // error message
 }
 
 // Satisfy Error interface.
 func (err *RepositoryError) Error() string {
-	return fmt.Sprintf("%d: %s", err.Code, err.Message)
+	return fmt.Sprintf("%s", err.Message)
 }
 
-func NewRepositoryError(code int, message string) *RepositoryError {
-	return &RepositoryError{Code: code, Message: message}
+func NewRepositoryError(message string) *RepositoryError {
+	return &RepositoryError{Message: message}
 }
 
 var (
-	ErrNotFound      = NewRepositoryError(404, "key not found")
-	ErrAlreadyExists = NewRepositoryError(409, "key already exists")
+	ErrNotFound            = NewRepositoryError("key not found")
+	ErrAlreadyExists       = NewRepositoryError("key already exists")
+	ErrInsertOperationFail = NewRepositoryError("insert operation failed")
+	ErrSelectOperationFail = NewRepositoryError("select operation failed")
+	ErrUpdateOperationFail = NewRepositoryError("update operation failed")
+	ErrDeleteOperationFail = NewRepositoryError("delete operation failed")
 )
