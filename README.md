@@ -40,4 +40,4 @@ Lightweight description below:
 
 ## License
 
-The project is licensed under an [MIT License](LICNSE).
+The project is licensed under an [MIT License](LICENSE).
