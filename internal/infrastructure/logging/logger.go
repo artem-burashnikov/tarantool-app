@@ -89,3 +89,7 @@ func (l *Logger) Warn(msg string, keysAndValues ...interface{}) {
 func (l *Logger) Error(msg string, keysAndValues ...interface{}) {
 	l.SugaredLogger.Errorw(msg, keysAndValues...)
 }
+
+func (l *Logger) Fatal(msg string, keysAndValues ...interface{}) {
+	l.SugaredLogger.Fatalw(msg, keysAndValues...)
+}
