@@ -29,26 +29,26 @@ func NewRequestHandler(crudHandler *usecase.CRUD, zlog *logging.Logger) *Request
 // On success responds with corresponding value stored in database.
 func (rh *RequestHandler) GETHandlerFunc(c *gin.Context) {
 	// Check if id is ok. If it is --- fetch the data. Then return it to user.
-	key := c.Param("id")
+	rq := domain.AppGetRequest{Key: c.Param("id")}
 
 	// Empty key is forbidden.
 	// Everything else is ok?
-	if key == "" {
+	if rq.Key == "" {
 		c.String(http.StatusBadRequest, "Missing key")
 		return
 	}
 
 	// Any other key is ok. Go fetch the data from repository.
-	value, err := rh.APIHandler.Read(c, key)
+	resp, err := rh.APIHandler.Read(c, &rq)
 	// Either Tarantool somehow failed or key was not found.
 	if err != nil {
 		// If key was not found, respond with status code 404.
 		if errors.Is(err, repository.ErrNotFound) {
-			c.JSON(repository.ErrNotFound.Code, gin.H{"error": "key not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": repository.ErrNotFound.Message})
 		} else {
 			// If further processing failed, log the error and respond with status code 500.
 			rh.Logger.Warn("Tarantool failed to retreive data by key",
-				"key", key,
+				"key", rq.Key,
 			)
 			c.String(http.StatusInternalServerError, "Internal server error.")
 		}
@@ -56,9 +56,7 @@ func (rh *RequestHandler) GETHandlerFunc(c *gin.Context) {
 	}
 
 	// Key was found --- respond in JSON.
-	c.JSON(http.StatusOK, domain.AppGetResponse{
-		Value: value},
-	)
+	c.JSON(http.StatusOK, resp)
 	return
 }
 
@@ -76,11 +74,11 @@ func (rh *RequestHandler) POSTHandlerFunc(c *gin.Context) {
 	}
 
 	// Either Tarantool somehow failed or key already exists.
-	err := rh.APIHandler.Create(c, req.Key, req.Value)
+	resp, err := rh.APIHandler.Create(c, &req)
 	if err != nil {
 		// If key already exists, respond with status code 409.
 		if errors.Is(err, repository.ErrAlreadyExists) {
-			c.JSON(repository.ErrAlreadyExists.Code, gin.H{"error": "key already exists"})
+			c.JSON(http.StatusConflict, gin.H{"error": repository.ErrAlreadyExists.Message})
 		} else {
 			// If further processing failed, log the error and respond with status code 500.
 			rh.Logger.Warn("Tarantool failed to store data",
@@ -92,23 +90,19 @@ func (rh *RequestHandler) POSTHandlerFunc(c *gin.Context) {
 		return
 	}
 
-	// Everything good --- respond with meta information.
-	c.JSON(http.StatusCreated, domain.AppPostResponse{
-		Message: "created",
-		Key:     req.Key,
-		Size:    uint(len(req.Value)), // number of bytes in value field
-	})
+	// Everything good --- respond.
+	c.JSON(http.StatusCreated, resp)
 	return
 }
 
 // PUT kv/{id} body: {"value": {ARBITRARY JSON}}
 // On success responds with some metainfo about the updated enrty.
 func (rh *RequestHandler) PUTHandlerFunc(c *gin.Context) {
+	rq := domain.AppPutRequest{Key: c.Param("id")}
+
 	// Empty key is forbidden.
 	// Everything else is ok?
-	key := c.Param("id")
-
-	if key == "" {
+	if rq.Key == "" {
 		c.String(http.StatusBadRequest, "Missing key")
 		return
 	}
@@ -129,66 +123,59 @@ func (rh *RequestHandler) PUTHandlerFunc(c *gin.Context) {
 
 	// At this point `value` field is certain to contain JSON data.
 	// Process it further.
-	value := rawReq["value"]
+	rq.Value = rawReq["value"]
 
 	// Either Tarantool somehow failed or key was not found.
-	err := rh.APIHandler.Update(c, key, value)
+	resp, err := rh.APIHandler.Update(c, &rq)
 	if err != nil {
 		// If key was not found, respond with status code 404.
 		if errors.Is(err, repository.ErrNotFound) {
-			c.JSON(repository.ErrNotFound.Code, gin.H{"error": "key not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": repository.ErrNotFound.Message})
 		} else {
 			// If further processing failed, log the error and respond with status code 500.
 			rh.Logger.Warn("Tarantool failed to update data",
-				"key", key,
-				"body", value,
+				"key", rq.Key,
+				"body", rq.Value,
 			)
 			c.String(http.StatusInternalServerError, "Internal server error.")
 		}
 		return
 	}
 
-	// Everything good --- respond with meta information.
-	c.JSON(http.StatusOK, domain.AppPutResponse{
-		Message: "updated",
-		Key:     key,
-		Size:    uint(len(value)), // number of bytes in value field
-	})
+	// Everything good --- respond.
+	c.JSON(http.StatusOK, resp)
 	return
 }
 
 // DELETE kv/{key}
 // On success responds with some metainfo about the deleted enrty.
 func (rh *RequestHandler) DeleteHandlerFunc(c *gin.Context) {
+	rq := domain.AppDeleteRequest{Key: c.Param("id")}
+
 	// Empty key is forbidden.
 	// Everything else is ok?
-	key := c.Param("id")
-
-	if key == "" {
+	if rq.Key == "" {
 		c.String(http.StatusBadRequest, "Missing key")
 		return
 	}
 
 	// Either Tarantool somehow failed or key was not found.
-	err := rh.APIHandler.Delete(c, key)
+	resp, err := rh.APIHandler.Delete(c, &rq)
 	if err != nil {
 		// If key was not found, respond with status code 404.
 		if errors.Is(err, repository.ErrNotFound) {
-			c.JSON(repository.ErrNotFound.Code, gin.H{"error": "key not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": repository.ErrNotFound.Message})
 		} else {
 			// If further processing failed, log the error and respond with status code 500.
 			rh.Logger.Warn("Tarantool failed to delete data",
-				"key", key,
+				"key", rq.Key,
 			)
 			c.String(http.StatusInternalServerError, "Internal server error.")
 		}
 		return
 	}
 
-	// Everything good --- respond with meta information.
-	c.JSON(http.StatusOK, domain.AppDeleteResponse{
-		Message: "deleted",
-		Key:     key,
-	})
+	// Everything good --- respond.
+	c.JSON(http.StatusOK, resp)
 	return
 }
