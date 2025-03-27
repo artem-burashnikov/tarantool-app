@@ -14,12 +14,25 @@ type AppPostRequest struct {
 
 // POST Response.
 type AppPostResponse struct {
-	Message string
-	Key     string
-	Size    uint
+	Message string `json:"message"`
+	Key     string `json:"key"`
+	Size    uint   `json:"size"`
 }
 
 // GET Response.
 type AppGetResponse struct {
 	Value json.RawMessage `json:"value"`
+}
+
+// PUT Response
+type AppPutResponse struct {
+	Message string `json:"message"`
+	Key     string `json:"key"`
+	Size    uint   `json:"size"`
+}
+
+// DELETE Response
+type AppDeleteResponse struct {
+	Message string `json:"message"`
+	Key     string `json:"key"`
 }
