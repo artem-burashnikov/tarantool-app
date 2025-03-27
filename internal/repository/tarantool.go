@@ -78,38 +78,35 @@ func (tt *Tarantool) Insert(key string, value json.RawMessage) (domain.TTPack, e
 		"key", key,
 		"value", value,
 	)
+
 	ttrq := domain.TTPack{
 		Key:   key,
 		Value: value,
 	}
+
 	request := tarantool.NewInsertRequest("kv_storage").Tuple(&ttrq)
 
-	future := tt.conn.Do(request)
-
-	var val []domain.TTPack
-	err := future.GetTyped(&val)
+	futureResp, err := tt.conn.Do(request).GetResponse()
 	if err != nil {
 		tt.log.Debug("Failed to Insert data",
 			"key", ttrq.Key,
 			"value", ttrq.Value,
+			"error", err,
 		)
 		return domain.TTPack{}, ErrInsertOperationFail
 	}
 
-	if len(val) == 0 {
-		tt.log.Debug("Insert returned zero length array",
-			"key", key,
-			"value", value,
-		)
+	if futureResp.Header().Error != tarantool.ErrorNo && futureResp.Header().Error.String() == "ER_TUPLE_FOUND" {
+		tt.log.Debug("response error code", "error", futureResp.Header().Error)
 		return domain.TTPack{}, ErrAlreadyExists
 	}
 
 	tt.log.Debug("Insert result",
-		"key", val[0].Key,
-		"value", val[0].Value,
+		"key", key,
+		"value", value,
 	)
 
-	return val[0], nil
+	return ttrq, nil
 }
 
 func (tt *Tarantool) Select(key string) (domain.TTPack, error) {
@@ -118,28 +115,25 @@ func (tt *Tarantool) Select(key string) (domain.TTPack, error) {
 	)
 	request := tarantool.NewSelectRequest("kv_storage").Key(tarantool.StringKey{S: key})
 
-	var result []domain.TTPack
-	err := tt.conn.Do(request).GetTyped(&result)
+	var resp []domain.TTPack
+	err := tt.conn.Do(request).GetTyped(&resp)
 	if err != nil {
 		tt.log.Debug("Failed to Select data",
 			"key", key,
+			"error", err,
 		)
 		return domain.TTPack{}, ErrSelectOperationFail
 	}
 
-	if len(result) == 0 {
-		tt.log.Debug("Select returned zero length array",
-			"key", key,
-		)
-		return domain.TTPack{}, ErrAlreadyExists
+	if len(resp) == 0 {
+		return domain.TTPack{}, ErrNotFound
 	}
 
 	tt.log.Debug("Select response",
 		"key", key,
-		"result", result[0],
 	)
 
-	return result[0], nil
+	return resp[0], nil
 }
 
 func (tt *Tarantool) Update(key string, value json.RawMessage) (domain.TTPack, error) {
@@ -148,27 +142,17 @@ func (tt *Tarantool) Update(key string, value json.RawMessage) (domain.TTPack, e
 		"value", value,
 	)
 
-	msgPckdJson, packErr := json.Marshal(value)
-
-	if packErr != nil {
-		tt.log.Debug("Failed to pack the value into msgPack",
-			"op", "update",
-			"key", key,
-			"value", value,
-		)
-		return domain.TTPack{}, packErr
-	}
-
 	request := tarantool.NewUpdateRequest("kv_storage").
 		Key(tarantool.StringKey{S: key}).
-		Operations(tarantool.NewOperations().Assign(2, msgPckdJson))
+		Operations(tarantool.NewOperations().Assign(2, value))
 
-	var result []domain.TTPack
+	var result []json.RawMessage
 	err := tt.conn.Do(request).GetTyped(&result)
 	if err != nil {
 		tt.log.Debug("Update request failed",
 			"key", key,
 			"value", value,
+			"error", err,
 		)
 		return domain.TTPack{}, ErrUpdateOperationFail
 	}
@@ -181,7 +165,7 @@ func (tt *Tarantool) Update(key string, value json.RawMessage) (domain.TTPack, e
 		return domain.TTPack{}, ErrNotFound
 	}
 
-	return result[0], nil
+	return domain.TTPack{Key: key, Value: result[0]}, nil
 }
 
 func (tt *Tarantool) Delete(key string) (domain.TTPack, error) {
@@ -193,10 +177,10 @@ func (tt *Tarantool) Delete(key string) (domain.TTPack, error) {
 
 	var result []domain.TTPack
 	err := tt.conn.Do(request).GetTyped(&result)
-
 	if err != nil {
 		tt.log.Debug("Delete request failed",
 			"key", key,
+			"error", err,
 		)
 		return domain.TTPack{}, ErrDeleteOperationFail
 	}

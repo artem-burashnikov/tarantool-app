@@ -41,6 +41,7 @@ func (rh *RequestHandler) GETHandlerFunc(c *gin.Context) {
 	// Any other key is ok. Go fetch the data from repository.
 	resp, err := rh.APIHandler.Read(c, &rq)
 	// Either Tarantool somehow failed or key was not found.
+	// TODO: " " key returns 500 internal server errror
 	if err != nil {
 		// If key was not found, respond with status code 404.
 		if errors.Is(err, repository.ErrNotFound) {
@@ -61,14 +62,14 @@ func (rh *RequestHandler) GETHandlerFunc(c *gin.Context) {
 }
 
 // POST /kv body: {key: "key", "value": {ARBITRARY JSON}}.
-// On success responds with some metainfo about the inserted enrty.
+// On success responds with some metainfo about the inserted enty.
 func (rh *RequestHandler) POSTHandlerFunc(c *gin.Context) {
 	// Verify that body is a valid JSON.
 	// If so, process it further and let Tarantool create an entry.
 	// Incorrect request body returns status code 400.
 	var req domain.AppPostRequest
 
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.ShouldBindJSON(&req); err != nil || req.Key == "" || len(req.Value) == 0 {
 		c.String(http.StatusBadRequest, "error: invalid request format")
 		return
 	}
@@ -96,7 +97,7 @@ func (rh *RequestHandler) POSTHandlerFunc(c *gin.Context) {
 }
 
 // PUT kv/{id} body: {"value": {ARBITRARY JSON}}
-// On success responds with some metainfo about the updated enrty.
+// On success responds with some metainfo about the updated enty.
 func (rh *RequestHandler) PUTHandlerFunc(c *gin.Context) {
 	rq := domain.AppPutRequest{Key: c.Param("id")}
 
@@ -148,7 +149,7 @@ func (rh *RequestHandler) PUTHandlerFunc(c *gin.Context) {
 }
 
 // DELETE kv/{key}
-// On success responds with some metainfo about the deleted enrty.
+// On success responds with some metainfo about the deleted enty.
 func (rh *RequestHandler) DeleteHandlerFunc(c *gin.Context) {
 	rq := domain.AppDeleteRequest{Key: c.Param("id")}
 
