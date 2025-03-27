@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"tarantool-app/internal/config"
 	"tarantool-app/internal/domain"
 	"tarantool-app/internal/infrastructure/logging"
@@ -15,8 +16,8 @@ import (
 )
 
 type Tarantool struct {
-	tt  *tarantool.Connection
-	log *logging.Logger
+	conn *tarantool.Connection
+	log  *logging.Logger
 }
 
 func NewTarantoolRepository(cfg *config.Config, zlog *logging.Logger) (*Tarantool, error) {
@@ -53,110 +54,156 @@ func NewTarantoolRepository(cfg *config.Config, zlog *logging.Logger) (*Tarantoo
 	zlog.Info("Database initialization succsessful.")
 
 	return &Tarantool{
-		tt:  conn,
-		log: zlog,
+		conn: conn,
+		log:  zlog,
 	}, nil
 }
 
 // Gracefully close tarantool connection.
-func (t *Tarantool) Close() {
-	if err := t.tt.CloseGraceful(); err != nil {
-		t.log.Error("Error closing Tarantool connection")
-		t.log.Debug("Failed to close the connection to database",
+func (tt *Tarantool) Close() {
+	if err := tt.conn.CloseGraceful(); err != nil {
+		tt.log.Error("Error closing Tarantool connection")
+		tt.log.Debug("Failed to close the connection to database",
 			"error", err,
 		)
 	} else {
-		t.log.Info("Database connection closed.")
+		tt.log.Info("Database connection closed.")
 	}
 }
 
-func (tt *Tarantool) SaveKeyValue(key string, value domain.AppPostRequest) error {
-	return nil
+// CRUD operations
+
+func (tt *Tarantool) Insert(key string, value json.RawMessage) (domain.TTPack, error) {
+	tt.log.Debug("Insert request",
+		"key", key,
+		"value", value,
+	)
+	ttrq := domain.TTPack{
+		Key:   key,
+		Value: value,
+	}
+	request := tarantool.NewInsertRequest("kv_storage").Tuple(&ttrq)
+
+	future := tt.conn.Do(request)
+
+	var val []domain.TTPack
+	err := future.GetTyped(&val)
+	if err != nil {
+		tt.log.Debug("Failed to Insert data",
+			"key", ttrq.Key,
+			"value", ttrq.Value,
+		)
+		return domain.TTPack{}, ErrInsertOperationFail
+	}
+
+	if len(val) == 0 {
+		tt.log.Debug("Insert returned zero length array",
+			"key", key,
+			"value", value,
+		)
+		return domain.TTPack{}, ErrAlreadyExists
+	}
+
+	tt.log.Debug("Insert result",
+		"key", val[0].Key,
+		"value", val[0].Value,
+	)
+
+	return val[0], nil
 }
 
-func (tt *Tarantool) GetByKey(key string) (domain.AppPostRequest, error) {
-	var value domain.AppPostRequest
-	return value, nil
+func (tt *Tarantool) Select(key string) (domain.TTPack, error) {
+	tt.log.Debug("Select request",
+		"key", key,
+	)
+	request := tarantool.NewSelectRequest("kv_storage").Key(tarantool.StringKey{S: key})
+
+	var result []domain.TTPack
+	err := tt.conn.Do(request).GetTyped(&result)
+	if err != nil {
+		tt.log.Debug("Failed to Select data",
+			"key", key,
+		)
+		return domain.TTPack{}, ErrSelectOperationFail
+	}
+
+	if len(result) == 0 {
+		tt.log.Debug("Select returned zero length array",
+			"key", key,
+		)
+		return domain.TTPack{}, ErrAlreadyExists
+	}
+
+	tt.log.Debug("Select response",
+		"key", key,
+		"result", result[0],
+	)
+
+	return result[0], nil
 }
 
-func (tt *Tarantool) SetValueByKey(key string, value domain.AppPostRequest) error {
-	return nil
+func (tt *Tarantool) Update(key string, value json.RawMessage) (domain.TTPack, error) {
+	tt.log.Debug("Update request",
+		"key", key,
+		"value", value,
+	)
+
+	msgPckdJson, packErr := json.Marshal(value)
+
+	if packErr != nil {
+		tt.log.Debug("Failed to pack the value into msgPack",
+			"op", "update",
+			"key", key,
+			"value", value,
+		)
+		return domain.TTPack{}, packErr
+	}
+
+	request := tarantool.NewUpdateRequest("kv_storage").
+		Key(tarantool.StringKey{S: key}).
+		Operations(tarantool.NewOperations().Assign(2, msgPckdJson))
+
+	var result []domain.TTPack
+	err := tt.conn.Do(request).GetTyped(&result)
+	if err != nil {
+		tt.log.Debug("Update request failed",
+			"key", key,
+			"value", value,
+		)
+		return domain.TTPack{}, ErrUpdateOperationFail
+	}
+
+	if len(result) == 0 {
+		tt.log.Debug("Update returned zero length array",
+			"key", key,
+			"value", value,
+		)
+		return domain.TTPack{}, ErrNotFound
+	}
+
+	return result[0], nil
 }
 
-func (tt *Tarantool) DeleteByKey(key string) error {
-	return nil
+func (tt *Tarantool) Delete(key string) (domain.TTPack, error) {
+	tt.log.Debug("Delete request",
+		"key", key,
+	)
+
+	request := tarantool.NewDeleteRequest("kv_storage").Key(tarantool.StringKey{S: key})
+
+	var result []domain.TTPack
+	err := tt.conn.Do(request).GetTyped(&result)
+
+	if err != nil {
+		tt.log.Debug("Delete request failed",
+			"key", key,
+		)
+		return domain.TTPack{}, ErrDeleteOperationFail
+	}
+
+	if len(result) == 0 {
+		return domain.TTPack{}, ErrNotFound
+	}
+
+	return result[0], nil
 }
-
-// 	// Close connection
-// 	conn.CloseGraceful()
-// 	log.Debug("Connection is closed", log.Str("user", cfg.Storage.Credentials.User))
-
-// Interact with the database
-// ...
-// Insert data
-// tuples := [][]interface{}{
-// 	{1, "Roxette", 1986},
-// 	{2, "Scorpions", 1965},
-// 	{3, "Ace of Base", 1987},
-// 	{4, "The Beatles", 1960},
-// }
-// var futures []*tarantool.Future
-// for _, tuple := range tuples {
-// 	request := tarantool.NewInsertRequest("bands").Tuple(tuple)
-// 	futures = append(futures, conn.Do(request))
-// }
-// fmt.Println("Inserted tuples:")
-// for _, future := range futures {
-// 	result, err := future.Get()
-// 	if err != nil {
-// 		fmt.Println("Got an error:", err)
-// 	} else {
-// 		fmt.Println(result)
-// 	}
-// }
-
-// // Select by primary key
-// data, err := conn.Do(
-// 	tarantool.NewSelectRequest("bands").
-// 		Limit(10).
-// 		Iterator(tarantool.IterEq).
-// 		Key([]interface{}{uint(1)}),
-// ).Get()
-// if err != nil {
-// 	fmt.Println("Got an error:", err)
-// }
-// fmt.Println("Tuple selected by the primary key value:", data)
-
-// // Select by secondary key
-// data, err = conn.Do(
-// 	tarantool.NewSelectRequest("bands").
-// 		Index("band").
-// 		Limit(10).
-// 		Iterator(tarantool.IterEq).
-// 		Key([]interface{}{"The Beatles"}),
-// ).Get()
-// if err != nil {
-// 	fmt.Println("Got an error:", err)
-// }
-// fmt.Println("Tuple selected by the secondary key value:", data)
-
-// // Update
-// data, err = conn.Do(
-// 	tarantool.NewUpdateRequest("bands").
-// 		Key(tarantool.IntKey{2}).
-// 		Operations(tarantool.NewOperations().Assign(1, "Pink Floyd")),
-// ).Get()
-// if err != nil {
-// 	fmt.Println("Got an error:", err)
-// }
-// fmt.Println("Updated tuple:", data)
-
-// // Delete
-// data, err = conn.Do(
-// 	tarantool.NewDeleteRequest("bands").
-// 		Key([]interface{}{uint(5)}),
-// ).Get()
-// if err != nil {
-// 	fmt.Println("Got an error:", err)
-// }
-// fmt.Println("Deleted tuple:", data)
