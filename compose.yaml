@@ -32,6 +32,7 @@ services:
       - tarantool_data:/var/lib/tarantool
       - ./configs/tarantool_storage_init.lua:/opt/tarantool/tarantool_storage_init.lua
       - ./configs/tarantool_storage.yaml:/opt/tarantool/tarantool_storage.yaml
+    command: tarantool /opt/tarantool/tarantool_storage_init.lua
     healthcheck:
       test: ["CMD-SHELL", "status"]
       interval: 5s
