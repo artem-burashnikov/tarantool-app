@@ -21,7 +21,7 @@ func (ttpr *AppPack) EncodeMsgpack(e *msgpack.Encoder) error {
 	if err := e.EncodeString(ttpr.Key); err != nil {
 		return err
 	}
-	if err := e.EncodeMulti(ttpr.Value); err != nil {
+	if err := e.EncodeMap(ttpr.Value); err != nil {
 		return err
 	}
 	return nil

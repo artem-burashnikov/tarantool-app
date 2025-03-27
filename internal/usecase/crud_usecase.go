@@ -1,3 +1,5 @@
+// Usecase layer. Decouples repository from route handlers.
+
 package usecase
 
 import (

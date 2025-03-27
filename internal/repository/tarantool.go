@@ -7,6 +7,7 @@ import (
 	"tarantool-app/internal/infrastructure/logging"
 	"time"
 
+	"github.com/tarantool/go-iproto"
 	"github.com/tarantool/go-tarantool/v2"
 
 	_ "github.com/tarantool/go-tarantool/v2/datetime"
@@ -36,7 +37,7 @@ func NewTarantoolRepository(cfg *config.Config, zlog *logging.Logger) (*Tarantoo
 
 	conn, err := tarantool.Connect(ctx, dialer, opts)
 	if err != nil {
-		zlog.Error("Connection refused.")
+		zlog.Error("Database connection refused.")
 		zlog.Debug("Failed to connect to database",
 			"address", dialer.Address,
 			"user", dialer.User,
@@ -70,37 +71,38 @@ func (tt *Tarantool) Close() {
 	}
 }
 
-// CRUD operations
-
+// POST ---> Insert
 func (tt *Tarantool) Insert(rq *domain.AppPack) error {
 	tt.log.Debug("Insert request",
 		"key", rq.Key,
 		"value", rq.Value,
 	)
 
-	// We can only check the header to determine the outcome of Insert operation.
+	// We can check only the header to determine the outcome of an Insert operation.
+	// No need to decode.
 	request := tarantool.NewInsertRequest("kv_storage").Tuple(&rq)
 
 	futureResp, err := tt.conn.Do(request).GetResponse()
-	if err != nil {
-		tt.log.Debug("Failed to Insert data",
-			"key", rq.Key,
-			"value", rq.Value,
-			"error", err,
-		)
-		return ErrInsertOperationFail
-	}
 
-	// If key already exists the response header will contain erorr string.
-	// Is there a better way?
-	if futureResp.Header().Error != tarantool.ErrorNo && futureResp.Header().Error.String() == "ER_TUPLE_FOUND" {
-		tt.log.Debug("response error code", "error", futureResp.Header().Error)
-		return ErrAlreadyExists
+	// We can check iproto error code to determine if the key is a duplicate.
+	if futureResp.Header().Error != tarantool.ErrorNo {
+		if tntErr, ok := err.(tarantool.Error); !ok || tntErr.Code == iproto.ER_TUPLE_FOUND {
+			tt.log.Debug("Tarantool response error", tntErr.Error())
+			return ErrAlreadyExists
+		} else {
+			tt.log.Debug("Failed to Insert data",
+				"key", rq.Key,
+				"value", rq.Value,
+				"error", err,
+			)
+			return ErrInsertOperationFail
+		}
 	}
 
 	return nil
 }
 
+// GET ---> Select
 func (tt *Tarantool) Select(rq *domain.AppPack) (*domain.AppPack, error) {
 	tt.log.Debug("Select request was made",
 		"key", rq.Key,
