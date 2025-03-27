@@ -33,7 +33,7 @@ func main() {
 	defer tt.Close()
 
 	// Inject repository into usecase layer.
-	crudUsecase := usecase.NewCRUD(tt)
+	crudUsecase := usecase.NewCRUD(tt, log)
 
 	// Inject usecases into handlers.
 	apiHandler := http.NewRequestHandler(crudUsecase, log)
