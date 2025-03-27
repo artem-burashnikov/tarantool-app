@@ -54,7 +54,10 @@ func (rh *RequestHandler) GETHandlerFunc(c *gin.Context) {
 	}
 
 	// Key was found and request now contains repository response --- respond to user.
-	c.JSON(http.StatusOK, resp.Value)
+	c.JSON(http.StatusOK, gin.H{
+		"key":   resp.Key,
+		"value": resp.Value,
+	})
 	return
 }
 
@@ -112,7 +115,7 @@ func (rh *RequestHandler) PUTHandlerFunc(c *gin.Context) {
 
 	// Verify that body is a valid JSON.
 	if err := c.ShouldBindJSON(&rq.Value); err != nil || len(rq.Value) != 1 || rq.Value["value"] == nil {
-		c.String(http.StatusBadRequest, "error: invalid request format")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request format"})
 		return
 	}
 

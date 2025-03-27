@@ -160,11 +160,11 @@ func (tt *Tarantool) Update(rq *domain.AppPack) error {
 
 	request := tarantool.NewUpdateRequest("kv_storage").
 		Key(tarantool.StringKey{S: rq.Key}).
-		Operations(tarantool.NewOperations().Assign(2, rq.Value))
+		Operations(tarantool.NewOperations().Assign(1, &rq.Value))
 
 	future := tt.conn.Do(request)
 
-	var result []map[string]any
+	var result []domain.AppPack
 	err := future.GetTyped(&result)
 	if err != nil {
 		tt.log.Debug("Update request failed",
