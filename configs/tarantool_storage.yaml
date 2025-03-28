@@ -1,0 +1,18 @@
+app:
+  file: "tarantool_storage_init.lua"
+
+credentials:
+  users:
+    storage:
+      password: sesame
+      privileges:
+      - permissions: [ read, write ]
+        spaces: [ kv_storage ]
+
+groups:
+  group001:
+    replicasets:
+      replicaset001:
+        instances:
+          instance001: {}
+
