@@ -1,10 +1,7 @@
-// Router setup and routes definitions.
-
 package http
 
 import (
-	"tarantool-app/internal/constants"
-	"tarantool-app/internal/infrastructure/logging"
+	"tarantool-app/internal/interfaces"
 
 	"github.com/gin-gonic/gin"
 )
@@ -13,26 +10,20 @@ type GinRouter struct {
 	Engine *gin.Engine
 }
 
-func NewGinRouter(env string, zlog *logging.Logger, rqHandlers *RequestHandler) *GinRouter {
-	if env == constants.EnvProd {
+func NewGinRouter(env string, log interfaces.Logger, h interfaces.KVHandler) *GinRouter {
+	if env == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	// Create a new engine and attach Recovery and Logger middleware.
-	r := gin.New()
+	r := gin.Default()
 
-	r.Use(gin.Recovery())
-	r.Use(GinLoggerMiddleware(zlog))
-
-	// This is just for silencing a warning.
-	// Matters only when a proxy server is involved.
 	if err := r.SetTrustedProxies(nil); err != nil {
-		zlog.Debug("Error setting SetTrustedProxies to nil",
+		log.Debug("Error setting SetTrustedProxies to nil",
 			"error", err,
 		)
 	}
 
-	setupRoutes(r, rqHandlers)
+	setupRoutes(r, h)
 
 	return &GinRouter{Engine: r}
 }
@@ -41,13 +32,12 @@ func (g *GinRouter) Run(addr string) error {
 	return g.Engine.Run(addr)
 }
 
-// Binds handlers to route handles.
-func setupRoutes(r *gin.Engine, h *RequestHandler) {
+func setupRoutes(r *gin.Engine, h interfaces.KVHandler) {
 	appGroup := r.Group("/kv")
 	{
-		appGroup.POST("", h.POSTHandlerFunc)
-		appGroup.PUT("/:id", h.PUTHandlerFunc)
-		appGroup.GET("/:id", h.GETHandlerFunc)
-		appGroup.DELETE("/:id", h.DeleteHandlerFunc)
+		appGroup.POST("", h.PostKV)
+		appGroup.PUT("/:id", h.PutKV)
+		appGroup.GET("/:id", h.GetKV)
+		appGroup.DELETE("/:id", h.DeleteKV)
 	}
 }
