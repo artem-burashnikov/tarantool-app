@@ -2,56 +2,48 @@ services:
   tarantool-app:
     build: .
     container_name: kv-app
-    environment:
-      CONFIG_PATH: "tarantool_app.yaml"
-      APP_ENV: "${APP_ENV:-local}"
-      APP_HOST: "${APP_HOST:-localhost}"
-      APP_PORT: "${APP_PORT:-8081}"
-      STORAGE_HOST: "tarantool-storage"
-      STORAGE_PORT: "${STORAGE_PORT:-3301}"
-      STORAGE_USERNAME: "storage"
-      STORAGE_PASSWORD: "sesame"
+    env_file:
+      - .env
     volumes:
       - "./configs/tarantool_app.yaml:/tarantool_app.yaml"
     ports:
-      - "${APP_PORT:-8081}:${APP_PORT:-8081}"
+      - "${APP_PORT:-5432}:${APP_PORT:-5432}"
     depends_on:
       tarantool-storage:
         condition: service_healthy
+    restart: unless-stopped
     networks:
       - tarantool
 
   tarantool-storage:
     image: tarantool/tarantool:3.3.1@sha256:294387c35a6120c6d881a3e1ccc174938c94afbe744834e6d500f28063c883f2
     container_name: kv-storage
-    environment:
-      TT_INSTANCE_NAME: "instance001"
-      TT_CONFIG: "/opt/tarantool/tarantool_storage.yaml"
-      TT_IPROTO_LISTEN: '[ {"uri":"${STORAGE_PORT:-3301}"} ]'
+    env_file:
+      - .env
     volumes:
       - tarantool_data:/var/lib/tarantool
-      - ./configs/tarantool_storage_init.lua:/opt/tarantool/tarantool_storage_init.lua
-      - ./configs/tarantool_storage.yaml:/opt/tarantool/tarantool_storage.yaml
-    command: tarantool /opt/tarantool/tarantool_storage_init.lua
+      - ./configs/tarantool_storage_init.lua:/opt/tarantool/tarantool_init.lua
+      - ./configs/tarantool_storage.yaml:/opt/tarantool/tarantool.yaml
+    command: tarantool /opt/tarantool/tarantool_init.lua
     healthcheck:
       test: ["CMD-SHELL", "status"]
       interval: 5s
       timeout: 3s
       retries: 5
       start_period: 10s
-    restart: always
+    restart: unless-stopped
     networks:
       - tarantool
 
   swagger-ui:
-    image: swaggerapi/swagger-ui
+    image: swaggerapi/swagger-ui@sha256:24b71463bed4551c57b9ef9c8a395008e40a45dcd37bc594aaf29474c592bf58
     container_name: swagger-ui
     environment:
       SWAGGER_JSON: /swagger/openapi.yaml
     volumes:
       - ./openapi.yaml:/swagger/openapi.yaml
     ports:
-      - "8082:8080"
+      - "${SWAGGER_PORT:-5432}:8080"
     networks:
       - tarantool
     depends_on:
