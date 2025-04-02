@@ -1,5 +1,16 @@
+---
 app:
+  name: "tarantool-app"
+  version: "0.1.0"
   file: "tarantool_storage_init.lua"
+
+log:
+  level: "debug"
+
+http:
+  port: "8080"
+
+storage:
 
 credentials:
   users:
@@ -15,4 +26,3 @@ groups:
       replicaset001:
         instances:
           instance001: {}
-
