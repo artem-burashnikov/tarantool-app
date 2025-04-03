@@ -11,8 +11,12 @@ definitions:
 host: localhost:8080
 info:
   contact: {}
-  description: This is the main API for the Tarantool application.
-  title: Tarantool KV API
+  description: This API provides CRUD operations for managing key-value pairs in the
+    Tarantool database.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  title: Tarantool Key-Value API
   version: "1.0"
 paths:
   /kv:

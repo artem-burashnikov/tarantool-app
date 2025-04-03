@@ -3,11 +3,7 @@ package v1
 import (
 	"tarantool-app/internal/interfaces"
 
-	docs "tarantool-app/docs"
-
 	"github.com/gin-gonic/gin"
-	swaggerfiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 type GinRouter struct {
@@ -20,8 +16,6 @@ func NewGinRouter(env string, log interfaces.Logger, h interfaces.KVHandler) *Gi
 	}
 
 	r := gin.Default()
-
-	docs.SwaggerInfo.BasePath = "/api/v1"
 
 	if err := r.SetTrustedProxies(nil); err != nil {
 		log.Debug("Error setting SetTrustedProxies to nil",
@@ -39,7 +33,7 @@ func (g *GinRouter) Run(addr string) error {
 }
 
 func setupRoutes(r *gin.Engine, h interfaces.KVHandler) {
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
+	// r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 	appGroup := r.Group("/kv")
 	{
 		appGroup.POST("", h.PostKV)

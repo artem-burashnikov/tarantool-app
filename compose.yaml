@@ -43,19 +43,22 @@ services:
     networks:
       - tarantool
 
-  # swagger-ui:
-  #   image: swaggerapi/swagger-ui@sha256:24b71463bed4551c57b9ef9c8a395008e40a45dcd37bc594aaf29474c592bf58
-  #   container_name: swagger-ui
-  #   environment:
-  #     SWAGGER_JSON: /swagger/openapi.yaml
-  #   volumes:
-  #     - ./openapi.yaml:/swagger/openapi.yaml
-  #   ports:
-  #     - 8081:8081
-  #   networks:
-  #     - tarantool
-  #   depends_on:
-  #     - tarantool-app
+  swagger-ui:
+    image: swaggerapi/swagger-ui@sha256:24b71463bed4551c57b9ef9c8a395008e40a45dcd37bc594aaf29474c592bf58
+    container_name: swagger-ui
+    environment:
+      SWAGGER_JSON: /openapi.yaml
+      BASE_URL: /swagger
+    volumes:
+      - type: bind
+        source: ./docs/swagger.yaml
+        target: /openapi.yaml
+    ports:
+      - "8081:8080"
+    networks:
+      - tarantool
+    depends_on:
+      - tarantool-app
 
 volumes:
   tarantool_data:
