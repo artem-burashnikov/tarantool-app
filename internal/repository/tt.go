@@ -22,7 +22,7 @@ type Tarantool struct {
 
 var _ interfaces.Repository = Tarantool{} // Tarantool must satisfy Repository
 
-func NewTarantoolRepository(cfg *config.Config, log interfaces.Logger) (Tarantool, error) {
+func NewTarantoolRepository(cfg config.Config, log interfaces.Logger) (Tarantool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
@@ -50,10 +50,7 @@ func NewTarantoolRepository(cfg *config.Config, log interfaces.Logger) (Tarantoo
 		return Tarantool{}, err
 	}
 
-	return Tarantool{
-		conn: conn,
-		log:  log,
-	}, nil
+	return Tarantool{conn: conn, log: log}, nil
 }
 
 func (tt Tarantool) Close() {

@@ -17,14 +17,14 @@ type AppHandler struct {
 	Logger  interfaces.Logger
 }
 
-var _ interfaces.KVHandler = (*AppHandler)(nil) // AppHandler must satisfy KVHandler
+var _ interfaces.KVHandler = AppHandler{} // AppHandler must satisfy KVHandler
 
 func NewRequestHandler(uc interfaces.UserUseCase, log interfaces.Logger) AppHandler {
 	return AppHandler{Handler: uc, Logger: log}
 }
 
 // GET kv/{id}
-func (rh *AppHandler) GetKV(c *gin.Context) {
+func (rh AppHandler) GetKV(c *gin.Context) {
 	rq := domain.Payload{Key: c.Param("id")}
 
 	resp, err := rh.Handler.Read(rq)
@@ -49,7 +49,7 @@ func (rh *AppHandler) GetKV(c *gin.Context) {
 }
 
 // POST /kv body: {key: "key", "value": {ARBITRARY JSON}}.
-func (rh *AppHandler) PostKV(c *gin.Context) {
+func (rh AppHandler) PostKV(c *gin.Context) {
 	var rq domain.Payload
 
 	if err := c.ShouldBindJSON(&rq); err != nil {
@@ -91,7 +91,7 @@ func (rh *AppHandler) PostKV(c *gin.Context) {
 }
 
 // PUT kv/{id} body: {"value": {ARBITRARY JSON}}
-func (rh *AppHandler) PutKV(c *gin.Context) {
+func (rh AppHandler) PutKV(c *gin.Context) {
 	rq := domain.Payload{Key: c.Param("id")}
 
 	if err := c.ShouldBindJSON(&rq.Value); err != nil || len(rq.Value) != 1 {
@@ -128,7 +128,7 @@ func (rh *AppHandler) PutKV(c *gin.Context) {
 }
 
 // DELETE kv/{key}
-func (rh *AppHandler) DeleteKV(c *gin.Context) {
+func (rh AppHandler) DeleteKV(c *gin.Context) {
 	rq := domain.Payload{Key: c.Param("id")}
 
 	resp, err := rh.Handler.Delete(rq)

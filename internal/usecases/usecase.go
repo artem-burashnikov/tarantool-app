@@ -11,10 +11,7 @@ type UserUseCase struct {
 }
 
 func NewUserUseCase(repo interfaces.Repository, log interfaces.Logger) UserUseCase {
-	return UserUseCase{
-		repo: repo,
-		log:  log,
-	}
+	return UserUseCase{repo: repo, log: log}
 }
 
 func (uc UserUseCase) Create(ap domain.Payload) error {
