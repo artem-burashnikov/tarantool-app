@@ -4,6 +4,8 @@ services:
     container_name: tt-kv-app
     env_file:
       - .env
+    links:
+      - "tarantool-storage:${TT_HOST}"
     volumes:
       - type: bind
         source: ./config/app_config.yaml

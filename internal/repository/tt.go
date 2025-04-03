@@ -28,10 +28,11 @@ func NewTarantoolRepository(cfg *config.Config, log interfaces.Logger) (Tarantoo
 
 	log.Debug("Connecting as",
 		"user", cfg.Storage.Credentials.Username,
-		"uri", cfg.Storage.Address,
+		"host", cfg.Storage.Host,
+		"port", cfg.Storage.Port,
 	)
 	dialer := tarantool.NetDialer{
-		Address:  cfg.Storage.Address,
+		Address:  cfg.Storage.Host + ":" + cfg.Storage.Port,
 		User:     cfg.Storage.Credentials.Username,
 		Password: cfg.Storage.Credentials.Password,
 	}
