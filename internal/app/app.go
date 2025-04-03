@@ -2,7 +2,7 @@ package app
 
 import (
 	"tarantool-app/config"
-	"tarantool-app/internal/infrastructure/http"
+	v1 "tarantool-app/internal/infrastructure/http/v1"
 	"tarantool-app/internal/repository"
 	"tarantool-app/internal/usecases"
 	"tarantool-app/internal/utils"
@@ -19,9 +19,9 @@ func Run(configPath string) {
 
 	usecase := usecases.NewUserUseCase(tt, log)
 
-	apiHandler := http.NewRequestHandler(usecase, log)
+	apiHandler := v1.NewRequestHandler(usecase, log)
 
-	r := http.NewGinRouter(cfg.App.Environment, log, apiHandler)
+	r := v1.NewGinRouter(cfg.App.Environment, log, apiHandler)
 
 	if err := r.Run(":" + cfg.HTTPServer.Port); err != nil {
 		log.Fatal("Failed to start HTTP server",

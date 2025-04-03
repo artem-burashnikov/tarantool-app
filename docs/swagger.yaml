@@ -1,0 +1,161 @@
+basePath: /
+definitions:
+  domain.Payload:
+    properties:
+      key:
+        type: string
+      value:
+        additionalProperties: {}
+        type: object
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: This is the main API for the Tarantool application.
+  title: Tarantool KV API
+  version: "1.0"
+paths:
+  /kv:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new key with the provided value in the Tarantool database.
+      parameters:
+      - description: Payload containing key and value
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Payload'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Key already exists
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create a new key-value pair
+      tags:
+      - kv
+  /kv/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes the specified key and its value from the Tarantool database.
+      parameters:
+      - description: Key ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Key not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Delete key-value pair
+      tags:
+      - kv
+    get:
+      consumes:
+      - application/json
+      description: Retrieves the value for the specified key from the Tarantool database.
+      parameters:
+      - description: Key ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Key not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get value by key
+      tags:
+      - kv
+    put:
+      consumes:
+      - application/json
+      description: Updates the value for the specified key in the Tarantool database.
+      parameters:
+      - description: Key ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Payload containing updated value
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Payload'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Key not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Update value by key
+      tags:
+      - kv
+swagger: "2.0"
