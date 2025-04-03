@@ -27,7 +27,7 @@ services:
     volumes:
       - type: volume
         source: tarantool_data
-        target: /var/lib/tarantoo
+        target: /var/lib/tarantool
       - type: bind
         source: ./config
         target: /opt/tarantool
