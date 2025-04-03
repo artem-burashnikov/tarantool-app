@@ -54,12 +54,12 @@ func (l ZapLogger) Fatal(msg string, keysAndValues ...any) {
 	l.SugaredLogger.Fatalw(msg, keysAndValues...)
 }
 
-func (l ZapLogger) Sync() error {
+func (l ZapLogger) Sync() {
 	err := l.SugaredLogger.Sync()
 	if err != nil {
 		l.Warn("Logger sync error",
 			"error", err,
 		)
+		l.Fatal(err.Error())
 	}
-	return err
 }
