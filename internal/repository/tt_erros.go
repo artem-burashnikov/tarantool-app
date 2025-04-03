@@ -2,8 +2,6 @@
 
 package repository
 
-import "fmt"
-
 type RepositoryError struct {
 	message string
 }
@@ -11,7 +9,7 @@ type RepositoryError struct {
 var _ error = RepositoryError{} // RepositoryError must satisfy error
 
 func (err RepositoryError) Error() string {
-	return fmt.Sprintf("%s", err.message)
+	return err.message
 }
 
 func NewRepositoryError(msg string) RepositoryError {

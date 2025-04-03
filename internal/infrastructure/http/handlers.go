@@ -45,7 +45,7 @@ func (rh *AppHandler) GetKV(c *gin.Context) {
 		"key":   resp.Key,
 		"value": resp.Value,
 	})
-	return
+	return //nolint:staticcheck
 }
 
 // POST /kv body: {key: "key", "value": {ARBITRARY JSON}}.
@@ -87,7 +87,7 @@ func (rh *AppHandler) PostKV(c *gin.Context) {
 		"key":     rq.Key,
 		"value":   rq.Value,
 	})
-	return
+	return //nolint:staticcheck
 }
 
 // PUT kv/{id} body: {"value": {ARBITRARY JSON}}
@@ -124,7 +124,7 @@ func (rh *AppHandler) PutKV(c *gin.Context) {
 		"key":     rq.Key,
 		"value":   rq.Value,
 	})
-	return
+	return //nolint:staticcheck
 }
 
 // DELETE kv/{key}
@@ -150,5 +150,5 @@ func (rh *AppHandler) DeleteKV(c *gin.Context) {
 		"key":     resp.Key,
 		"value":   resp.Value,
 	})
-	return
+	return //nolint:staticcheck
 }
