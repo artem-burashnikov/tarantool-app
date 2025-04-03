@@ -3,6 +3,9 @@ app:
 
 config:
   context:
+    storage_port:
+      from: env
+      env: TT_PORT
     storage_user:
       from: env
       env: TT_USER
@@ -26,4 +29,4 @@ groups:
           instance001:
             iproto:
               listen:
-              - uri: '3301'
+              - uri: '{{ context.storage_port }}'

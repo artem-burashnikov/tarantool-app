@@ -16,7 +16,7 @@ type Config struct {
 }
 
 type AppConfig struct {
-	Environment string `yaml:"environment" env:"APP_ENV" env-required:"true"`
+	Environment string `yaml:"environment" env:"APP_ENV" env-default:"local" env-required:"true"`
 	Name        string `yaml:"name" env:"APP_NAME" env-required:"true"`
 	Version     string `yaml:"version" env:"APP_VERSION" env-required:"true"`
 }
@@ -26,7 +26,8 @@ type HTTPServerConfig struct {
 }
 
 type Storage struct {
-	Address     string `env:"TT_URI" env-required:"true"`
+	Host        string `env:"TT_HOST" env-default:"tarantool-storage" env-required:"true"`
+	Port        string `env:"TT_PORT" env-default:"3301" env-required:"true"`
 	Credentials StorageCredentials
 }
 

@@ -24,7 +24,7 @@ func configureLogger(env string) *zap.Logger {
 	switch env {
 	case "local":
 		loggerConfig = zap.NewDevelopmentConfig()
-	case "production":
+	case "prod":
 		loggerConfig = zap.NewProductionConfig()
 	}
 
