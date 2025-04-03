@@ -8,10 +8,10 @@ FROM golang:1.24.1@sha256:52ff1b35ff8de185bf9fd26c70077190cd0bed1e9f16a2d498ce90
 COPY --from=cache /go/pkg /go/pkg
 WORKDIR /app
 COPY . .
-RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o /go/bin/app /app/cmd/app
+RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o /go/bin/app ./cmd/tarantool-app
 
 FROM scratch AS final
 LABEL author="a.burashnikov"
 COPY --from=build /go/bin/app /app
-USER nobody
+EXPOSE 8080
 ENTRYPOINT [ "/app" ]

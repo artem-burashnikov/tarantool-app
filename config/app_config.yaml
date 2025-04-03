@@ -1,0 +1,8 @@
+---
+app:
+  environment: "local" # local, production
+  name: "tarantool-app"
+  version: "0.1.0"
+
+http_server:
+  port: "8080"

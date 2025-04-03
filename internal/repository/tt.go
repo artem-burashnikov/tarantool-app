@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"os"
 	"tarantool-app/config"
 	"tarantool-app/internal/domain"
 	"tarantool-app/internal/interfaces"
@@ -27,18 +26,26 @@ func NewTarantoolRepository(cfg *config.Config, log interfaces.Logger) (Tarantoo
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	// TODO: fixme
+	log.Debug("Connecting as",
+		"user", cfg.Storage.Credentials.Username,
+		"uri", cfg.Storage.Address,
+	)
 	dialer := tarantool.NetDialer{
-		Address:  cfg.Storage.URI,
-		User:     os.Getenv("TT_USER"),
-		Password: os.Getenv("TT_PASSWORD"),
+		Address:  cfg.Storage.Address,
+		User:     cfg.Storage.Credentials.Username,
+		Password: cfg.Storage.Credentials.Password,
 	}
 	opts := tarantool.Opts{
-		Timeout: time.Second,
+		Timeout:   time.Second,
+		Reconnect: time.Second,
 	}
 
 	conn, err := tarantool.Connect(ctx, dialer, opts)
 	if err != nil {
+		log.Debug("Connection refused",
+			"user", cfg.Storage.Credentials.Username,
+			err,
+		)
 		return Tarantool{}, err
 	}
 
@@ -52,7 +59,7 @@ func (tt Tarantool) Close() {
 	if err := tt.conn.CloseGraceful(); err != nil {
 		tt.log.Error("Error closing Tarantool connection")
 	} else {
-		tt.log.Info("Database connection closed.")
+		tt.log.Info("Database connection closed")
 	}
 }
 

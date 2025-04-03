@@ -11,7 +11,7 @@ import (
 func Run(configPath string) {
 	cfg := utils.Must(config.Load(configPath))
 
-	log := NewLogger(cfg.Log.Level)
+	log := NewLogger(cfg.App.Environment)
 	defer log.Sync()
 
 	tt := utils.Must(repository.NewTarantoolRepository(&cfg, &log))
@@ -21,7 +21,7 @@ func Run(configPath string) {
 
 	apiHandler := http.NewRequestHandler(usecase, &log)
 
-	r := http.NewGinRouter(cfg.Log.Level, log, &apiHandler)
+	r := http.NewGinRouter(cfg.App.Environment, log, &apiHandler)
 
 	if err := r.Run(":" + cfg.HTTPServer.Port); err != nil {
 		log.Fatal("Failed to start HTTP server",
