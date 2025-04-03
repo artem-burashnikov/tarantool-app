@@ -1,9 +1,1 @@
-.git
-.editorconfig
-.gitattributes
-.github
-compose.yaml
-Dockerfile
-openapi.yaml
-LICENSE
-README.md
+.*
