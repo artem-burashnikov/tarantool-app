@@ -1,11 +1,10 @@
 package main
 
 import (
-	"os"
 	"tarantool-app/internal/app"
 )
 
 func main() {
-	configPath := os.Getenv("CONFIG_PATH")
+	configPath := "app_config.yaml"
 	app.Run(configPath)
 }

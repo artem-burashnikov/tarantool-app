@@ -1,0 +1,29 @@
+app:
+  file: "tt_init.lua"
+
+config:
+  context:
+    storage_user:
+      from: env
+      env: TT_USER
+    storage_password:
+      from: env
+      env: TT_PASSWORD
+
+credentials:
+  users:
+    '{{ context.storage_user }}':
+      password: '{{ context.storage_password }}'
+      privileges:
+      - permissions: [ read, write ]
+        spaces: [ kv_storage ]
+
+groups:
+  group001:
+    replicasets:
+      replicaset001:
+        instances:
+          instance001:
+            iproto:
+              listen:
+              - uri: '3301'

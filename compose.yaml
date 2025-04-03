@@ -1,30 +1,36 @@
 services:
   tarantool-app:
     build: .
-    container_name: kv-app
+    container_name: tt-kv-app
     env_file:
       - .env
     volumes:
-      - "./configs/tarantool_app.yaml:/tarantool_app.yaml"
+      - type: bind
+        source: ./config/app_config.yaml
+        target: /app_config.yaml
+        read_only: true
     ports:
-      - "${APP_PORT:-5432}:${APP_PORT:-5432}"
+      - "${HTTP_PORT:-8080}:8080"
     depends_on:
       tarantool-storage:
         condition: service_healthy
-    restart: unless-stopped
     networks:
       - tarantool
 
   tarantool-storage:
     image: tarantool/tarantool:3.3.1@sha256:294387c35a6120c6d881a3e1ccc174938c94afbe744834e6d500f28063c883f2
-    container_name: kv-storage
+    container_name: tt-kv-storage
     env_file:
       - .env
     volumes:
-      - tarantool_data:/var/lib/tarantool
-      - ./configs/tarantool_storage_init.lua:/opt/tarantool/tarantool_init.lua
-      - ./configs/tarantool_storage.yaml:/opt/tarantool/tarantool.yaml
-    command: tarantool /opt/tarantool/tarantool_init.lua
+      - type: volume
+        source: tarantool_data
+        target: /var/lib/tarantoo
+      - type: bind
+        source: ./config
+        target: /opt/tarantool
+        read_only: true
+    command: tarantool --name "instance001" --config /opt/tarantool/tt_config.yaml
     healthcheck:
       test: ["CMD-SHELL", "status"]
       interval: 5s
@@ -35,23 +41,23 @@ services:
     networks:
       - tarantool
 
-  swagger-ui:
-    image: swaggerapi/swagger-ui@sha256:24b71463bed4551c57b9ef9c8a395008e40a45dcd37bc594aaf29474c592bf58
-    container_name: swagger-ui
-    environment:
-      SWAGGER_JSON: /swagger/openapi.yaml
-    volumes:
-      - ./openapi.yaml:/swagger/openapi.yaml
-    ports:
-      - "${SWAGGER_PORT:-5432}:8080"
-    networks:
-      - tarantool
-    depends_on:
-      - tarantool-app
+  # swagger-ui:
+  #   image: swaggerapi/swagger-ui@sha256:24b71463bed4551c57b9ef9c8a395008e40a45dcd37bc594aaf29474c592bf58
+  #   container_name: swagger-ui
+  #   environment:
+  #     SWAGGER_JSON: /swagger/openapi.yaml
+  #   volumes:
+  #     - ./openapi.yaml:/swagger/openapi.yaml
+  #   ports:
+  #     - 8081:8081
+  #   networks:
+  #     - tarantool
+  #   depends_on:
+  #     - tarantool-app
 
 volumes:
   tarantool_data:
-    name: tarantool_data_vol
+    name: tarantool_data
 
 networks:
   tarantool:

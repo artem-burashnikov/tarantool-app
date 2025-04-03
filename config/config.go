@@ -7,37 +7,37 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
-//Note that `env` and `env-default` are config parser package specific tags.
+// Note that `env` and `env-default` are config `cleanenv` package specific tags.
 
-type (
-	Config struct {
-		App        `yaml:"app"`
-		HTTPServer `yaml:"http"`
-		Log        `yaml:"log"`
-		Storage
-	}
+type Config struct {
+	App        AppConfig        `yaml:"app"`
+	HTTPServer HTTPServerConfig `yaml:"http_server"`
+	Storage    Storage
+}
 
-	App struct {
-		Name    string `yaml:"name" env:"APP_NAME" env-required:"true"`
-		Version string `yaml:"version" env:"APP_VERSION" env-required:"true"`
-	}
+type AppConfig struct {
+	Environment string `yaml:"environment" env:"APP_ENV" env-required:"true"`
+	Name        string `yaml:"name" env:"APP_NAME" env-required:"true"`
+	Version     string `yaml:"version" env:"APP_VERSION" env-required:"true"`
+}
 
-	HTTPServer struct {
-		Port string `yaml:"port" env:"HTTP_PORT" env-default:"8080" env-required:"true"`
-	}
+type HTTPServerConfig struct {
+	Port string `yaml:"port" env:"HTTP_PORT" env-default:"8080" env-required:"true"`
+}
 
-	Log struct {
-		Level string `yaml:"level" env:"LOG_LEVEL" env-required:"true"`
-	}
+type Storage struct {
+	Address     string `env:"TT_URI" env-required:"true"`
+	Credentials StorageCredentials
+}
 
-	Storage struct {
-		URI string `env:"TT_URI" env-required:"true"`
-	}
-)
+type StorageCredentials struct {
+	Username string `env:"TT_USER" env-required:"true"`
+	Password string `env:"TT_PASSWORD" env-required:"true"`
+}
 
 func Load(configPath string) (Config, error) {
 	if configPath == "" {
-		return Config{}, fmt.Errorf("CONFIG_PATH is not set")
+		return Config{}, fmt.Errorf("CONFIG_PATH environment variable must be set")
 	}
 
 	fileInfo, err := os.Stat(configPath)
@@ -52,7 +52,6 @@ func Load(configPath string) (Config, error) {
 	}
 
 	var cfg Config
-	// TODO: use some other config parser.
 	err = cleanenv.ReadConfig(configPath, &cfg)
 
 	return cfg, err
