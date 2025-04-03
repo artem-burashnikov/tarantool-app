@@ -68,7 +68,133 @@ A scalable **Key-Value storage** solution built on [Tarantool][1] and powered by
 
 ## 🌐 API Endpoints
 
-TODO
+Below are the available API endpoints for the Tarantool Key-Value Storage:
+
+### 🔍 Get Value by Key
+
+- **Description**: Retrieves the value for the specified key from the Tarantool database.
+- **Method**: `GET`
+- **Endpoint**: `/kv/{id}`
+- **Path Parameters**:
+  - `id` (string): The key ID to retrieve.
+- **Responses**:
+  - `200 OK`: Returns the key-value pair:
+
+    ```json
+    {
+        "key": "foo",
+        "value": {
+            "bar": "baz"
+        }
+    }
+    ```
+
+  - `404 Not Found`: Key not found.
+  - `500 Internal Server Error`: Server error.
+
+---
+
+### ➕ Create a New Key-Value Pair
+
+- **Description**: Creates a new key-value pair in the Tarantool database.
+- **Method**: `POST`
+- **Endpoint**: `/kv`
+- **Request Body**:
+
+    ```json
+    {
+        "key": "foo",
+        "value": {
+            "bar": "baz"
+        }
+    }
+    ```
+
+- **Responses**:
+  - `201 Created`: Key-value pair created successfully.
+
+    ```json
+    {
+        "message": "created",
+        "key": "foo",
+        "value": {
+            "bar": "baz"
+        }
+    }
+    ```
+
+  - `400 Bad Request`: Invalid request body or missing fields.
+  - `409 Conflict`: Key already exists.
+  - `500 Internal Server Error`: Server error.
+
+---
+
+### ✏️ Update Value by Key
+
+- **Description**: Updates the value for the specified key in the Tarantool database.
+- **Method**: `PUT`
+- **Endpoint**: `/kv/{id}`
+- **Path Parameters**:
+  - `id` (string): The key ID to update.
+- **Request Body**:
+
+    ```json
+    {
+        "value": {
+            "bar": "zab"
+        }
+    }
+    ```
+
+- **Responses**:
+  - `200 OK`: Key-value pair updated successfully.
+
+    ```json
+    {
+        "message": "updated",
+        "key": "foo",
+        "value": {
+            "bar": "zab"
+        }
+    }
+    ```
+
+  - `400 Bad Request`: Invalid request body or missing fields.
+  - `404 Not Found`: Key not found.
+  - `500 Internal Server Error`: Server error.
+
+---
+
+### ❌ Delete Key-Value Pair
+
+- **Description**: Deletes the specified key-value pair from the Tarantool database.
+- **Method**: `DELETE`
+- **Endpoint**: `/kv/{id}`
+- **Path Parameters**:
+  - `id` (string): The key ID to delete.
+- **Responses**:
+  - `200 OK`: Key-value pair deleted successfully.
+
+    ```json
+    {
+        "message": "deleted",
+        "key": "foo",
+        "value": {
+            "bar": "baz"
+        }
+    }
+    ```
+
+  - `404 Not Found`: Key not found.
+  - `500 Internal Server Error`: Server error.
+
+---
+
+### 📘 Notes
+
+- All endpoints accept and return JSON.
+- Replace `{id}` with the actual key ID in the path.
+- Ensure the Tarantool database is running and accessible before making requests.
 
 ## 📜 License
 
